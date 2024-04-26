@@ -11,10 +11,10 @@ jobs:
       matrix:
         include:
           - dockerfile: ./backend/Dockerfile
-            image: marcotechstarter/example-backend
+            image: kpblm256/example-backend
             context: ./backend
           - dockerfile: ./frontend/Dockerfile
-            image: marcotechstarter/example-frontend
+            image: kpblm256/example-frontend
             context: ./frontend
     steps:
       - name: Checkout code
