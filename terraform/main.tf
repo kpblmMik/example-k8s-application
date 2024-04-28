@@ -98,7 +98,7 @@ data "template_file" "ingress_template" {
   template = file("${path.module}/../deployment/ingress.tpl")
 
   vars = {
-    elb_dns = module.eks.cluster_endpoint
+    elb_dns = replace(module.eks.cluster_endpoint, "https://", "")
   }
 }
 
