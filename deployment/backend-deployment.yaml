@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
         - name: example-backend
-          image: marcotechstarter/example-backend:1.1.1
+          image: kpblm256/example-backend:1.0.1
           imagePullPolicy: IfNotPresent
           resources:
             requests:

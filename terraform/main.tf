@@ -80,6 +80,34 @@ resource "null_resource" "update_kubeconfig" {
   }
 }
 
+# Update Helm repositories
+resource "null_resource" "helm_repo_update" {
+  triggers = {
+    always_run = "${timestamp()}"
+  }
+
+  provisioner "local-exec" {
+    command = "helm repo update"
+    interpreter = ["bash", "-c"]
+    working_dir = "${path.module}"
+  }
+}
+
+# Read the content of the ingress template file
+data "template_file" "ingress_template" {
+  template = file("${path.module}/../deployment/ingress.tpl")
+
+  vars = {
+    elb_dns = module.eks.cluster_endpoint
+  }
+}
+
+# Write the rendered ingress.yaml to a file
+resource "local_file" "ingress_yaml" {
+  filename = "${path.module}/../deployment/ingress.yaml"
+  content  = data.template_file.ingress_template.rendered
+}
+
 resource "helm_release" "ingress_nginx" { 
   name       = "ingress-nginx"
   repository = "https://kubernetes.github.io/ingress-nginx" 
@@ -95,4 +123,3 @@ resource "helm_release" "argocd" {
   create_namespace =true
   namespace = "argocd"
 }
-
