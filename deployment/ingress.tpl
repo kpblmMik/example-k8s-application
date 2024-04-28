@@ -7,7 +7,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: "${elb_dns}"
+    - host: "${lower(elb_dns)}"
       http:
         paths:
           - path: /
