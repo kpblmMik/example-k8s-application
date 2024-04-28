@@ -87,11 +87,13 @@ resource "null_resource" "helm_repo_update" {
   }
 
   provisioner "local-exec" {
-    command = "helm repo update"
-    interpreter = ["bash", "-c"]
+    command     = "helm repo update"
     working_dir = "${path.module}"
   }
+
+  depends_on = [null_resource.update_kubeconfig]
 }
+
 
 # Read the content of the ingress template file
 data "template_file" "ingress_template" {
