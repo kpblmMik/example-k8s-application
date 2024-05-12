@@ -1,0 +1,86 @@
+name: ci-cd pipeline
+on: [push]
+env:
+  AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+  PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'latest'
+      - name: Build
+        run: |
+          cd frontend
+          npm install
+          npm run build
+          ls -la
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend
+          path: frontend/dist/frontend/browser
+
+  upload_to_s3:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend
+          path: frontend/dist/frontend/browser
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+            aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+      - name: Upload to S3
+        run: |
+          aws --version
+          cd frontend/dist/frontend/browser
+          ls -la
+          aws s3 cp . s3://$AWS_S3_BUCKET/ --recursive --acl public-read
+
+  ansible-to-ec2:
+    needs: upload_to_s3
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.HOST_IP }} >> ~/.ssh/known_hosts
+      - name: Set up Ansible
+        run: |
+          echo "$PRIVATE_KEY" > ./temp_key.pem
+          chmod 600 ./temp_key.pem
+          export ANSIBLE_HOST_KEY_CHECKING=False
+      - name: Run Ansible playbook
+        run: |
+          ansible --version
+          ansible-playbook -i hosts.ini deploy-backend.yml --private-key=./temp_key.pem
+          rm -f ./temp_key.pem
+
+  start-backend:
+    needs: ansible-to-ec2
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'latest'
+      - name: Start backend
+        run: |
+          cd backend
+          npm install
+          npm start &
+          sleep 20
+          kill $! || true

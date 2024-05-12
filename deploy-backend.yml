@@ -1,0 +1,19 @@
+- hosts: all
+  become: yes
+  tasks:
+    - name: Install Docker
+      yum:
+        name: docker
+        state: present
+
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Run Docker container
+      shell: >
+        docker run -d -p 3000:3000 kpblm256/example-backend
+      args:
+        executable: /bin/bash
